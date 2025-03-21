@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     aws = {
-      source = "hashicorp/aws"
+      source  = "hashicorp/aws"
       version = "5.90.0"
     }
   }
@@ -39,7 +39,7 @@ resource "aws_instance" "k8s_nodes" {
   for_each                    = var.instance_types
   ami                         = data.aws_ami.example.id
   instance_type               = each.value
-  key_name                    = "nirvanan.online.pem"
+  key_name                    = "nirvanan.online"
   security_groups             = [aws_security_group.k8s_sg.name]
   associate_public_ip_address = true
 
@@ -114,7 +114,7 @@ resource "null_resource" "run_ansible" {
     connection {
       type        = "ssh"
       user        = "ubuntu"
-      private_key = file("${path.module}/nirvanan.online.pem")
+      private_key = file("${path.module}/nirvanan.online")
       host        = aws_instance.k8s_nodes["master"].public_ip
     }
   }
@@ -124,26 +124,26 @@ resource "null_resource" "run_ansible" {
     connection {
       type        = "ssh"
       user        = "ubuntu"
-      private_key = file("${path.module}/nirvanan.online.pem")
+      private_key = file("${path.module}/nirvanan.online")
       host        = aws_instance.k8s_nodes["master"].public_ip
     }
 
     inline = [
-      "cat <<EOF > /home/ubuntu/nirvanan.online.pem",
-      "${file("${path.module}/nirvanan.online.pem")}",
+      "cat <<EOF > /home/ubuntu/nirvanan.online",
+      "${file("${path.module}/nirvanan.online")}",
       "EOF",
-      "sudo chmod 400 /home/ubuntu/nirvanan.online.pem",
+      "sudo chmod 400 /home/ubuntu/nirvanan.online",
       "sudo apt update && sudo apt install -y ansible",
       "echo '[master1]' > /home/ubuntu/inventory.ini",
       "echo 'master ansible_host=127.0.0.1 ansible_connection=local' >> /home/ubuntu/inventory.ini",
       "echo '[workers]' >> /home/ubuntu/inventory.ini",
-      "echo 'worker1 ansible_host=${aws_instance.k8s_nodes["worker1"].private_ip} ansible_user=ubuntu ansible_ssh_private_key_file=/home/ubuntu/nirvanan.online.pem   ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"' >> /home/ubuntu/inventory.ini",
-      "echo 'worker2 ansible_host=${aws_instance.k8s_nodes["worker2"].private_ip} ansible_user=ubuntu ansible_ssh_private_key_file=/home/ubuntu/nirvanan.online.pem   ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"' >> /home/ubuntu/inventory.ini",
+      "echo 'worker1 ansible_host=${aws_instance.k8s_nodes["worker1"].private_ip} ansible_user=ubuntu ansible_ssh_private_key_file=/home/ubuntu/nirvanan.online   ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"' >> /home/ubuntu/inventory.ini",
+      "echo 'worker2 ansible_host=${aws_instance.k8s_nodes["worker2"].private_ip} ansible_user=ubuntu ansible_ssh_private_key_file=/home/ubuntu/nirvanan.online   ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"' >> /home/ubuntu/inventory.ini",
       "cat /home/ubuntu/inventory.ini",
       "ls -l /home/ubuntu/",
-      "cat /home/ubuntu/nirvanan.online.pem",
-      "md5sum /home/ubuntu/nirvanan.online.pem",
-      "ssh-keygen -y -f /home/ubuntu/nirvanan.online.pem",
+      "cat /home/ubuntu/nirvanan.online",
+      "md5sum /home/ubuntu/nirvanan.online",
+      "ssh-keygen -y -f /home/ubuntu/nirvanan.online",
       "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i /home/ubuntu/inventory.ini /home/ubuntu/playbook.yaml"
     ]
   }
