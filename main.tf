@@ -6,8 +6,8 @@ terraform {
     }
   }
   backend "s3" {
-    bucket = "spa-ecs-example-siva"
-    key    = "kubeadm/terraform.tfstate"
+    bucket = "mini-k8s"
+    key    = "mini-kubeadm/terraform.tfstate"
     region = "us-east-1"
   }
 }
@@ -39,7 +39,7 @@ resource "aws_instance" "k8s_nodes" {
   for_each                    = var.instance_types
   ami                         = data.aws_ami.example.id
   instance_type               = each.value
-  key_name                    = "siva"
+  key_name                    = "nirvanan.online.pem"
   security_groups             = [aws_security_group.k8s_sg.name]
   associate_public_ip_address = true
 
@@ -96,8 +96,8 @@ output "records" {
 # r53 records
 resource "aws_route53_record" "www" {
   for_each = var.instance_types
-  zone_id  = "Z011675617HENPLWZ1EJC"
-  name     = "${each.key}.konkas.tech"
+  zone_id  = "Z05092734G4FDXVKQUHI"
+  name     = "${each.key}.nirvanan.online"
   type     = "A"
   ttl      = "300"
   records  = [aws_instance.k8s_nodes[each.key].public_ip]
@@ -114,7 +114,7 @@ resource "null_resource" "run_ansible" {
     connection {
       type        = "ssh"
       user        = "ubuntu"
-      private_key = file("${path.module}/siva")
+      private_key = file("${path.module}/nirvanan.online.pem")
       host        = aws_instance.k8s_nodes["master"].public_ip
     }
   }
@@ -124,26 +124,26 @@ resource "null_resource" "run_ansible" {
     connection {
       type        = "ssh"
       user        = "ubuntu"
-      private_key = file("${path.module}/siva")
+      private_key = file("${path.module}/nirvanan.online.pem")
       host        = aws_instance.k8s_nodes["master"].public_ip
     }
 
     inline = [
-      "cat <<EOF > /home/ubuntu/siva",
-      "${file("${path.module}/siva")}",
+      "cat <<EOF > /home/ubuntu/nirvanan.online.pem",
+      "${file("${path.module}/nirvanan.online.pem")}",
       "EOF",
-      "sudo chmod 400 /home/ubuntu/siva",
+      "sudo chmod 400 /home/ubuntu/nirvanan.online.pem",
       "sudo apt update && sudo apt install -y ansible",
       "echo '[master1]' > /home/ubuntu/inventory.ini",
       "echo 'master ansible_host=127.0.0.1 ansible_connection=local' >> /home/ubuntu/inventory.ini",
       "echo '[workers]' >> /home/ubuntu/inventory.ini",
-      "echo 'worker1 ansible_host=${aws_instance.k8s_nodes["worker1"].private_ip} ansible_user=ubuntu ansible_ssh_private_key_file=/home/ubuntu/siva   ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"' >> /home/ubuntu/inventory.ini",
-      "echo 'worker2 ansible_host=${aws_instance.k8s_nodes["worker2"].private_ip} ansible_user=ubuntu ansible_ssh_private_key_file=/home/ubuntu/siva   ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"' >> /home/ubuntu/inventory.ini",
+      "echo 'worker1 ansible_host=${aws_instance.k8s_nodes["worker1"].private_ip} ansible_user=ubuntu ansible_ssh_private_key_file=/home/ubuntu/nirvanan.online.pem   ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"' >> /home/ubuntu/inventory.ini",
+      "echo 'worker2 ansible_host=${aws_instance.k8s_nodes["worker2"].private_ip} ansible_user=ubuntu ansible_ssh_private_key_file=/home/ubuntu/nirvanan.online.pem   ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"' >> /home/ubuntu/inventory.ini",
       "cat /home/ubuntu/inventory.ini",
       "ls -l /home/ubuntu/",
-      "cat /home/ubuntu/siva",
-      "md5sum /home/ubuntu/siva",
-      "ssh-keygen -y -f /home/ubuntu/siva",
+      "cat /home/ubuntu/nirvanan.online.pem",
+      "md5sum /home/ubuntu/nirvanan.online.pem",
+      "ssh-keygen -y -f /home/ubuntu/nirvanan.online.pem",
       "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i /home/ubuntu/inventory.ini /home/ubuntu/playbook.yaml"
     ]
   }
