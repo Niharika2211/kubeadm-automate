@@ -106,11 +106,9 @@ resource "aws_route53_record" "www" {
 resource "null_resource" "run_ansible" {
   depends_on = [aws_instance.k8s_nodes]
 
-  # Copy playbook.yaml
   provisioner "file" {
     source      = "playbook.yaml"
     destination = "/home/ubuntu/playbook.yaml"
-
     connection {
       type        = "ssh"
       user        = "ubuntu"
@@ -119,7 +117,17 @@ resource "null_resource" "run_ansible" {
     }
   }
 
-  # Execute Ansible
+  provisioner "file" {
+    source      = "${path.module}/nirvanan.online"
+    destination = "/home/ubuntu/nirvanan.online"
+    connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = file("${path.module}/nirvanan.online")
+      host        = aws_instance.k8s_nodes["master"].public_ip
+    }
+  }
+
   provisioner "remote-exec" {
     connection {
       type        = "ssh"
@@ -127,23 +135,14 @@ resource "null_resource" "run_ansible" {
       private_key = file("${path.module}/nirvanan.online")
       host        = aws_instance.k8s_nodes["master"].public_ip
     }
-
     inline = [
-      "cat <<EOF > /home/ubuntu/nirvanan.online",
-      "${file("${path.module}/nirvanan.online")}",
-      "EOF",
-      "sudo chmod 400 /home/ubuntu/nirvanan.online",
+      "chmod 400 /home/ubuntu/nirvanan.online",
       "sudo apt update && sudo apt install -y ansible",
       "echo '[master1]' > /home/ubuntu/inventory.ini",
       "echo 'master ansible_host=127.0.0.1 ansible_connection=local' >> /home/ubuntu/inventory.ini",
       "echo '[workers]' >> /home/ubuntu/inventory.ini",
-      "echo 'worker1 ansible_host=${aws_instance.k8s_nodes["worker1"].private_ip} ansible_user=ubuntu ansible_ssh_private_key_file=/home/ubuntu/nirvanan.online   ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"' >> /home/ubuntu/inventory.ini",
-      "echo 'worker2 ansible_host=${aws_instance.k8s_nodes["worker2"].private_ip} ansible_user=ubuntu ansible_ssh_private_key_file=/home/ubuntu/nirvanan.online   ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"' >> /home/ubuntu/inventory.ini",
-      "cat /home/ubuntu/inventory.ini",
-      "ls -l /home/ubuntu/",
-      "cat /home/ubuntu/nirvanan.online",
-      "md5sum /home/ubuntu/nirvanan.online",
-      "ssh-keygen -y -f /home/ubuntu/nirvanan.online",
+      "echo 'worker1 ansible_host=${aws_instance.k8s_nodes["worker1"].private_ip} ansible_user=ubuntu ansible_ssh_private_key_file=/home/ubuntu/nirvanan.online ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"' >> /home/ubuntu/inventory.ini",
+      "echo 'worker2 ansible_host=${aws_instance.k8s_nodes["worker2"].private_ip} ansible_user=ubuntu ansible_ssh_private_key_file=/home/ubuntu/nirvanan.online ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"' >> /home/ubuntu/inventory.ini",
       "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i /home/ubuntu/inventory.ini /home/ubuntu/playbook.yaml"
     ]
   }
